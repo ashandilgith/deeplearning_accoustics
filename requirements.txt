@@ -1,6 +1,6 @@
 tensorflow
 librosa
-numpy 
-matplotlib
+numpy
 gradio
-sckit-learn
+matplotlib
+scikit-learn
