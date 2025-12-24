@@ -1,0 +1,6 @@
+tensorflow
+librosa
+numpy 
+matplotlib
+gradio
+sckit-learn
