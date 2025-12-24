@@ -17,7 +17,8 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          git config --global user.email "your_email@example.com"
-          git config --global user.name "Your Name"
-          git remote add space https://piranaware:$HF_TOKEN@huggingface.co/spaces/YOUR_HF_USERNAME/piranaware-v1
+          git config --global user.email "ashandilgith@users.noreply.github.com"
+          git config --global user.name "Ashan Dilgith"
+          # This command pushes your code to your specific HF Space
+          git remote add space https://ashandilgith:$HF_TOKEN@huggingface.co/spaces/ashandilgith/piranware_v2
           git push --force space main
