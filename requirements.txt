@@ -3,5 +3,5 @@ librosa
 numpy
 matplotlib
 scikit-learn
-huggingface-hub>=0.25.0
-gradio>=5.16.0
+huggingface-hub
+streamlit>=1.39.0

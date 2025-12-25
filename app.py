@@ -1,80 +1,119 @@
-import gradio as gr
+import streamlit as st
+import os
 from src.processing import train_mode, predict_health
 
-# --- UI Functions ---
-def run_training(audio, mode):
-    if audio is None:
-        return "⚠️ Error: Please record audio first."
-    return train_mode(audio, mode)
+# --- CONFIGURATION ---
+st.set_page_config(page_title="Piranaware V2", page_icon="🚤", layout="centered")
 
-def run_analysis(audio, mode):
-    if audio is None:
-        return "⚠️ Error: Please record audio first."
-    return predict_health(audio, mode)
+# Temporary folder to hold the recorded wav file for processing
+TEMP_DIR = "temp_audio"
+os.makedirs(TEMP_DIR, exist_ok=True)
 
-# --- Layout ---
-with gr.Blocks(title="Piranaware V2") as app:
-    gr.Markdown("# 🚤 Piranaware: Autoencoder Anomaly Detection")
-    gr.Markdown("Step 1: Train the system on HEALTHY sounds for each speed.\nStep 2: Test new sounds to detect faults.")
+def save_and_process(audio_value):
+    """
+    Helper to save the raw audio bytes from Streamlit to a file
+    that Librosa can read.
+    """
+    if audio_value is None:
+        return None
     
-    with gr.Tab("Step 1: Training (Calibration)"):
-        with gr.Row():
-            # IDLE
-            with gr.Column():
-                gr.Markdown("### 1. Idle (Neutral)")
-                train_idle_audio = gr.Audio(sources=["microphone", "upload"], type="filepath")
-                btn_idle = gr.Button("Train IDLE Model")
-                out_idle = gr.Textbox(label="Status")
-                # api_name explicitely registers the route
-                btn_idle.click(
-                    fn=lambda x: run_training(x, "idle"), 
-                    inputs=train_idle_audio, 
-                    outputs=out_idle,
-                    api_name="train_idle"
-                )
-            
-            # SLOW
-            with gr.Column():
-                gr.Markdown("### 2. Slow (15-20 km/h)")
-                train_slow_audio = gr.Audio(sources=["microphone", "upload"], type="filepath")
-                btn_slow = gr.Button("Train SLOW Model")
-                out_slow = gr.Textbox(label="Status")
-                btn_slow.click(
-                    fn=lambda x: run_training(x, "slow"), 
-                    inputs=train_slow_audio, 
-                    outputs=out_slow,
-                    api_name="train_slow"
-                )
+    # Save to disk
+    save_path = os.path.join(TEMP_DIR, "input.wav")
+    with open(save_path, "wb") as f:
+        f.write(audio_value.read())
+    
+    return save_path
 
-            # FAST
-            with gr.Column():
-                gr.Markdown("### 3. Fast (40-50 km/h)")
-                train_fast_audio = gr.Audio(sources=["microphone", "upload"], type="filepath")
-                btn_fast = gr.Button("Train FAST Model")
-                out_fast = gr.Textbox(label="Status")
-                btn_fast.click(
-                    fn=lambda x: run_training(x, "fast"), 
-                    inputs=train_fast_audio, 
-                    outputs=out_fast,
-                    api_name="train_fast"
-                )
+# --- UI HEADER ---
+st.title("🚤 Piranaware V2")
+st.caption("Acoustic Anomaly Detection | Autoencoder Digital Twin")
 
-    with gr.Tab("Step 2: Diagnostics"):
-        gr.Markdown("### Test Engine Health")
-        mode_selector = gr.Radio(["idle", "slow", "fast"], label="Current Speed", value="idle")
-        test_audio = gr.Audio(sources=["microphone", "upload"], type="filepath")
-        test_btn = gr.Button("Analyze Sound")
-        test_out = gr.Textbox(label="Diagnostic Report", lines=5)
+# --- TABS ---
+tab_train, tab_test = st.tabs(["🛠️ 1. Calibration (Train)", "🩺 2. Diagnostics (Test)"])
+
+# === TAB 1: TRAINING ===
+with tab_train:
+    st.info("Instructions: Record ~30s of HEALTHY audio for each speed to teach the AI.")
+    
+    # We use columns to organize the 3 modes
+    col1, col2, col3 = st.columns(3)
+
+    # --- IDLE ---
+    with col1:
+        st.subheader("Idle")
+        # st.audio_input is the new native recorder
+        audio_idle = st.audio_input("Record Idle", key="rec_idle")
         
-        test_btn.click(
-            fn=run_analysis, 
-            inputs=[test_audio, mode_selector], 
-            outputs=test_out,
-            api_name="predict"
-        )
-app.queue()
+        if st.button("Train IDLE", key="btn_train_idle"):
+            if audio_idle:
+                path = save_and_process(audio_idle)
+                with st.spinner("Training Idle Brain..."):
+                    result = train_mode(path, "idle")
+                st.success("Done!")
+                st.write(result)
+            else:
+                st.error("Record audio first.")
 
-# CRITICAL FIX: Enable queueing for request handling
-if __name__ == "__main__":
-    app.queue() 
-    app.launch()
+    # --- SLOW ---
+    with col2:
+        st.subheader("Slow")
+        audio_slow = st.audio_input("Record Slow", key="rec_slow")
+        
+        if st.button("Train SLOW", key="btn_train_slow"):
+            if audio_slow:
+                path = save_and_process(audio_slow)
+                with st.spinner("Training Slow Brain..."):
+                    result = train_mode(path, "slow")
+                st.success("Done!")
+                st.write(result)
+            else:
+                st.error("Record audio first.")
+
+    # --- FAST ---
+    with col3:
+        st.subheader("Fast")
+        audio_fast = st.audio_input("Record Fast", key="rec_fast")
+        
+        if st.button("Train FAST", key="btn_train_fast"):
+            if audio_fast:
+                path = save_and_process(audio_fast)
+                with st.spinner("Training Fast Brain..."):
+                    result = train_mode(path, "fast")
+                st.success("Done!")
+                st.write(result)
+            else:
+                st.error("Record audio first.")
+
+# === TAB 2: DIAGNOSTICS ===
+with tab_test:
+    st.divider()
+    st.header("Check Engine Health")
+    
+    # 1. Select Mode
+    mode = st.selectbox("Which speed are you testing?", ["idle", "slow", "fast"])
+    
+    # 2. Record
+    audio_test = st.audio_input("Record Engine Sound", key="rec_test")
+    
+    # 3. Analyze
+    if st.button("Analyze Sound", key="btn_analyze"):
+        if audio_test:
+            path = save_and_process(audio_test)
+            
+            with st.spinner(f"Running Autoencoder against {mode.upper()} profile..."):
+                report = predict_health(path, mode)
+            
+            # Visual Feedback
+            if "HEALTHY" in report:
+                st.balloons()
+                st.success("Engine is Healthy")
+                st.code(report)
+            elif "ANOMALY" in report:
+                st.error("⚠️ Anomaly Detected")
+                st.warning("The engine sound deviates significantly from the calibration.")
+                st.code(report)
+            else:
+                # Handle "Model not found" errors
+                st.warning(report)
+        else:
+            st.error("Please record audio first.")
