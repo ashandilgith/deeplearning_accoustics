@@ -72,6 +72,7 @@ with gr.Blocks(title="Piranaware V2") as app:
             outputs=test_out,
             api_name="predict"
         )
+app.queue()
 
 # CRITICAL FIX: Enable queueing for request handling
 if __name__ == "__main__":
